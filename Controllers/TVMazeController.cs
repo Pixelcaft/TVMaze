@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
 using TVMaze.Core;
+using TVMaze.Repository;
 
 namespace TVMaze.Controllers
 {
@@ -15,11 +16,13 @@ namespace TVMaze.Controllers
     {
         private readonly HttpClient _httpClient;
         private readonly ILogger<TVMazeController> _logger;
+        private readonly TvMazeContext _dbContext;
 
-        public TVMazeController(HttpClient httpClient, ILogger<TVMazeController> logger)
+        public TVMazeController(HttpClient httpClient, ILogger<TVMazeController> logger, TvMazeContext dbContext)
         {
             _httpClient = httpClient;
             _logger = logger;
+            _dbContext = dbContext;
         }
 
         [HttpGet("shows")]
@@ -52,21 +55,32 @@ namespace TVMaze.Controllers
                     {
                         if (doc.RootElement.ValueKind == JsonValueKind.Array)
                         {
-                            foreach (var showElemnt in doc.RootElement.EnumerateArray())
+                            foreach (var showElement in doc.RootElement.EnumerateArray())
                             {
-                                var airdateProprty = showElemnt.GetProperty("airdate");
-                                var showProperty = showElemnt.GetProperty("show");
+                                var airdateProperty = showElement.GetProperty("airdate");
+                                var showProperty = showElement.GetProperty("show");
                                 var idProperty = showProperty.GetProperty("id");
                                 var nameProperty = showProperty.GetProperty("name");
 
                                 if (idProperty.ValueKind == JsonValueKind.Number)
                                 {
-                                    var showAirdate = airdateProprty.GetString();
+                                    var showAirdate = airdateProperty.GetString();
                                     var showId = idProperty.GetInt32();
                                     var showName = nameProperty.GetString();
 
                                     try
                                     {
+                                        var showEntity = new Show
+                                        {
+                                            ShowId = showId,
+                                            Day = day,
+                                            Month = month,
+                                            Year = year,
+                                        };
+                                        _dbContext.Shows.Add(showEntity);
+
+                                        await _dbContext.SaveChangesAsync();
+
                                         var castResponse = await PerformRequestWithRateLimitAsync($"shows/{showId}/cast");
 
                                         var castData = JsonDocument.Parse(castResponse);
@@ -80,6 +94,19 @@ namespace TVMaze.Controllers
 
                                         castInfoList.Add(new CastInfo { ShowAirdate = showAirdate, ShowId = showId, ShowName = showName, Cast = castList });
                                         _logger.LogInformation($"Processing show: {showId}, {showName}");
+
+                                        foreach (var castMember in castList)
+                                        {
+                                            var actorEntity = new Actor
+                                            {
+                                                ActorId = castMember.PersonId,
+                                                ActorName = "",
+                                                ShowID = showEntity.ID
+                                            };
+                                            _dbContext.Actors.Add(actorEntity);
+                                        }
+
+                                        await _dbContext.SaveChangesAsync();
 
                                     }
                                     catch (HttpRequestException ex)
