@@ -126,7 +126,7 @@ namespace TVMaze.Controllers
                                             var actorEntity = new Actor
                                             {
                                                 ActorId = castMember.PersonId,
-                                                ActorName = "",
+                                                ActorNames = castMember.PersonName,
                                                 ShowID = showEntity.ID
                                             };
                                             _dbContext.Actors.Add(actorEntity);
@@ -177,29 +177,19 @@ namespace TVMaze.Controllers
                       (actor, show) => new { actor, show })
                 .Where(joined => joined.show.Year == year && joined.show.Month == month)
                 .GroupBy(joined => joined.actor.ActorId)
-                .Select(group => new { ActorId = group.Key, Percentage = (double)group.Count() / totalActors * 100 })
+                .Select(group => new
+                {
+                    ActorId = group.Key,
+                    Percentage = (double)group.Count() / totalActors * 100,
+                    ActorName = group.First().actor.ActorNames ?? "Unknown"
+                })
                 .OrderByDescending(x => x.Percentage)
                 .Take(10)
                 .ToListAsync();
 
-            // Haal de namen op van de top 10 acteurs via de TVMaze API.
-            var topActorsResult = new List<object>();
-            foreach (var actor in topActors)
-            {
-                var actorDetailsResponse = await PerformRequestWithRateLimitAsync($"people/{actor.ActorId}");
-                var actorDetails = JsonDocument.Parse(actorDetailsResponse);
-                var actorName = actorDetails.RootElement.GetProperty("name").GetString();
-
-                topActorsResult.Add(new
-                {
-                    ActorId = actor.ActorId,
-                    Percentage = actor.Percentage,
-                    ActorName = actorName ?? "Unknown"
-                });
-            }
-
-            return topActorsResult;
+            return topActors.Cast<object>().ToList();
         }
+
 
         private async Task<string> PerformRequestWithRateLimitAsync(string requestUrl)
         {

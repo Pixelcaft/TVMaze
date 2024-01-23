@@ -11,8 +11,8 @@ using TVMaze.Repository;
 namespace TVMaze.Migrations
 {
     [DbContext(typeof(TvMazeContext))]
-    [Migration("20240123124628_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20240123133029_CreateNewTable")]
+    partial class CreateNewTable
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -35,7 +35,7 @@ namespace TVMaze.Migrations
                     b.Property<int>("ActorId")
                         .HasColumnType("int");
 
-                    b.Property<string>("ActorName")
+                    b.Property<string>("ActorNames")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 

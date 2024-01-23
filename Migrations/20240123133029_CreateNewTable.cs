@@ -5,7 +5,7 @@
 namespace TVMaze.Migrations
 {
     /// <inheritdoc />
-    public partial class shows : Migration
+    public partial class CreateNewTable : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -33,7 +33,7 @@ namespace TVMaze.Migrations
                     ID = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     ActorId = table.Column<int>(type: "int", nullable: false),
-                    ActorName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ActorNames = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     ShowID = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>

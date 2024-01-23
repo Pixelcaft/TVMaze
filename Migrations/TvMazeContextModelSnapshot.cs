@@ -32,7 +32,7 @@ namespace TVMaze.Migrations
                     b.Property<int>("ActorId")
                         .HasColumnType("int");
 
-                    b.Property<string>("ActorName")
+                    b.Property<string>("ActorNames")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
