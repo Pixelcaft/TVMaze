@@ -67,9 +67,6 @@ namespace TVMaze.Controllers
 
                 var castInfoList = new List<CastInfo>();
 
-                // Set the base URL for the TVMaze API.
-               // _httpClient.BaseAddress = new Uri("https://api.tvmaze.com/");
-
                 //for (int day = 1; day <= DateTime.DaysInMonth(year, month); day++)
                 for (int day = 1; day <= 2; day++)
                 {
