@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Net.Http;
@@ -18,11 +19,29 @@ namespace TVMaze.Controllers
         private readonly ILogger<TVMazeController> _logger;
         private readonly TvMazeContext _dbContext;
 
+        private async Task<bool> MonthYearExistsAsync(int year, int month)
+        {
+            if (await _dbContext.Shows.AnyAsync(s => s.Year == year && s.Month == month))
+            {
+                _logger.LogInformation($"Data for year {year} and month {month} already exists in the database.");
+
+                // Bereken de top 10 acteurs.
+                var topActorsResult = await CalculateTopActorsAsync(year, month);
+
+                return true;
+            }
+
+            return false;
+        }
+
         public TVMazeController(HttpClient httpClient, ILogger<TVMazeController> logger, TvMazeContext dbContext)
         {
             _httpClient = httpClient;
             _logger = logger;
             _dbContext = dbContext;
+
+            // Set the base URL for the TVMaze API during initialization.
+            _httpClient.BaseAddress = new Uri("https://api.tvmaze.com/");
         }
 
         [HttpGet("shows")]
@@ -36,10 +55,20 @@ namespace TVMaze.Controllers
                     return BadRequest("Invalid year or month.");
                 }
 
+                bool monthYearExists = await MonthYearExistsAsync(year, month);
+
+                if (monthYearExists)
+                {
+                    // Bereken de top 10 acteurs.
+                    var topActorsResultMonthYear = await CalculateTopActorsAsync(year, month);
+
+                    return Ok(new { TopActors = topActorsResultMonthYear });
+                }
+
                 var castInfoList = new List<CastInfo>();
 
                 // Set the base URL for the TVMaze API.
-                _httpClient.BaseAddress = new Uri("https://api.tvmaze.com/");
+               // _httpClient.BaseAddress = new Uri("https://api.tvmaze.com/");
 
                 //for (int day = 1; day <= DateTime.DaysInMonth(year, month); day++)
                 for (int day = 1; day <= 2; day++)
@@ -119,8 +148,11 @@ namespace TVMaze.Controllers
                     }
                 }
 
+                // Bereken de top 10 acteurs.
+                var topActorsResult = await CalculateTopActorsAsync(year, month);
 
-                return Ok(castInfoList);
+                return Ok(new { TopActors = topActorsResult });
+
             }
             catch (HttpRequestException)
             {
@@ -129,15 +161,70 @@ namespace TVMaze.Controllers
             }
         }
 
+        private async Task<List<object>> CalculateTopActorsAsync(int year, int month)
+        {
+            // Bereken het totale aantal acteurs in de Actors-tabel voor de opgegeven maand en jaar.
+            var totalActors = await _dbContext.Actors
+                .Join(_dbContext.Shows,
+                      actor => actor.ShowID,
+                      show => show.ID,
+                      (actor, show) => new { actor, show })
+                .Where(joined => joined.show.Year == year && joined.show.Month == month)
+                .CountAsync();
+
+            // Bereken het percentage voor elke acteur in de top 10 voor de opgegeven maand en jaar.
+            var topActors = await _dbContext.Actors
+                .Join(_dbContext.Shows,
+                      actor => actor.ShowID,
+                      show => show.ID,
+                      (actor, show) => new { actor, show })
+                .Where(joined => joined.show.Year == year && joined.show.Month == month)
+                .GroupBy(joined => joined.actor.ActorId)
+                .Select(group => new { ActorId = group.Key, Percentage = (double)group.Count() / totalActors * 100 })
+                .OrderByDescending(x => x.Percentage)
+                .Take(10)
+                .ToListAsync();
+
+            // Haal de namen op van de top 10 acteurs via de TVMaze API.
+            var topActorsResult = new List<object>();
+            foreach (var actor in topActors)
+            {
+                var actorDetailsResponse = await PerformRequestWithRateLimitAsync($"people/{actor.ActorId}");
+                var actorDetails = JsonDocument.Parse(actorDetailsResponse);
+                var actorName = actorDetails.RootElement.GetProperty("name").GetString();
+
+                topActorsResult.Add(new
+                {
+                    ActorId = actor.ActorId,
+                    Percentage = actor.Percentage,
+                    ActorName = actorName ?? "Unknown"
+                });
+            }
+
+            return topActorsResult;
+        }
+
         private async Task<string> PerformRequestWithRateLimitAsync(string requestUrl)
         {
-            //var delaySeconds = (int)(TimeSpan.FromSeconds(RequestIntervalSeconds).TotalSeconds / MaxRequestsPerInterval);
-            await Task.Delay(500);
+            try
+            {
+                // Perform the request and delay to comply with the rate limit.
+                await Task.Delay(500);
 
-            var response = await _httpClient.GetStringAsync(requestUrl);
+                // Perform the request and receive the response as a string.
+                var response = await _httpClient.GetStringAsync(requestUrl);
 
-            return response;
+                return response;
+            }
+            catch (Exception ex)
+            {
+                // Handle any errors that occur while making the request.
+                _logger.LogError($"Error performing request: {ex.Message}");
+                throw; // Re-throw the exception to propagate the issue.
+            }
         }
+
+
 
     }
 }
