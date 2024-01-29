@@ -67,8 +67,8 @@ namespace TVMaze.Controllers
 
                 var castInfoList = new List<CastInfo>();
 
-                //for (int day = 1; day <= DateTime.DaysInMonth(year, month); day++)
-                for (int day = 1; day <= 2; day++)
+                for (int day = 1; day <= DateTime.DaysInMonth(year, month); day++)
+                //for (int day = 1; day <= 2; day++)
                 {
 
                     // Format the request URL for the /schedule endpoint with the specified year, month, and day.
@@ -108,6 +108,8 @@ namespace TVMaze.Controllers
                                         await _dbContext.SaveChangesAsync();
 
                                         var castResponse = await PerformRequestWithRateLimitAsync($"shows/{showId}/cast");
+
+                                       // var castlist2 = JsonSerializer.Deserialize <CastMember[]>(castResponse);
 
                                         var castData = JsonDocument.Parse(castResponse);
                                         var castList = castData.RootElement.EnumerateArray()
