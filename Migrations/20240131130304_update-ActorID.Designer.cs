@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TVMaze.Repository;
 
@@ -10,9 +11,11 @@ using TVMaze.Repository;
 namespace TVMaze.Migrations
 {
     [DbContext(typeof(TvMazeContext))]
-    partial class TvMazeContextModelSnapshot : ModelSnapshot
+    [Migration("20240131130304_update-ActorID")]
+    partial class updateActorID
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -32,7 +35,7 @@ namespace TVMaze.Migrations
                     b.Property<int>("ActorID")
                         .HasColumnType("int");
 
-                    b.Property<string>("ActorName")
+                    b.Property<string>("ActorNames")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 

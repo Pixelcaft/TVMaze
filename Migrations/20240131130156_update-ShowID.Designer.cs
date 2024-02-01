@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TVMaze.Repository;
 
@@ -10,9 +11,11 @@ using TVMaze.Repository;
 namespace TVMaze.Migrations
 {
     [DbContext(typeof(TvMazeContext))]
-    partial class TvMazeContextModelSnapshot : ModelSnapshot
+    [Migration("20240131130156_update-ShowID")]
+    partial class updateShowID
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -29,10 +32,10 @@ namespace TVMaze.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
 
-                    b.Property<int>("ActorID")
+                    b.Property<int>("ActorId")
                         .HasColumnType("int");
 
-                    b.Property<string>("ActorName")
+                    b.Property<string>("ActorNames")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
