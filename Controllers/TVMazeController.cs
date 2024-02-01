@@ -123,11 +123,13 @@ namespace TVMaze.Controllers
                 var topActorsQuery = (from s in _dbContext.Shows
                                       join a in _dbContext.Actors on s.ShowID equals a.ShowID
                                       where s.Year == year && s.Month == month
-                                      group new { s, a } by s.ShowID into grouped
+                                      group new { s, a } by new { s.ShowID, a.ActorID, a.ActorName } into grouped
                                       select new TopActorInfo
                                       {
-                                          ShowID = grouped.Key,
-                                          AppearanceCount = grouped.Select(g => g.a.ActorID).Distinct().Count(),
+                                          ShowID = grouped.Key.ShowID,
+                                          ActorID = grouped.Key.ActorID,
+                                          ActorName = grouped.Key.ActorName,
+                                          AppearanceCount = grouped.Count(),
                                       }).ToList();
 
                 var totalShows = await _dbContext.Shows.CountAsync(s => s.Year == year && s.Month == month);
@@ -136,13 +138,20 @@ namespace TVMaze.Controllers
                 foreach (var actorInfo in topActorsQuery)
                 {
                     double percentage = (double)actorInfo.AppearanceCount / totalShows * 100;
-                    actorInfo.Percentage = Math.Round(percentage, 2);
-                    topActorsList.Add(actorInfo);
+                    actorInfo.Percentage = percentage;
                 }
 
-                // Sorteer de topActorsList op basis van het aantal verschijningen (AppearanceCount) in aflopende volgorde
-                topActorsList = topActorsList.OrderByDescending(a => a.AppearanceCount).ToList();
+                // Sorteer de topActorsList op basis van het percentage in aflopende volgorde
+                topActorsQuery = topActorsQuery.OrderByDescending(a => a.Percentage).Take(10).ToList();
 
+                // Afronden van het percentage voor elke acteur
+                foreach (var actorInfo in topActorsQuery)
+                {
+                    actorInfo.Percentage = Math.Round(actorInfo.Percentage, 2);
+                }
+
+                // Retourneer de topActorsQuery
+                return topActorsQuery;
             }
             catch (Exception ex)
             {
@@ -150,9 +159,8 @@ namespace TVMaze.Controllers
                 _logger.LogError($"Error calculating top actors: {ex.Message}");
                 throw; // Gooi de uitzondering opnieuw om het probleem door te geven.
             }
-
-            return topActorsList;
         }
+
 
 
 
